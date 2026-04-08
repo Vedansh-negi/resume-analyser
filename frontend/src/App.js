@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import "./App.css";
 
 function App() {
@@ -16,30 +16,31 @@ function App() {
     setResume({ ...resume, [field]: value });
   };
 
+  // ✅ FIXED ANALYZE FUNCTION
   const analyze = async () => {
-   const fullResume =
-  resume.education + " " +
-  resume.skills + " " +
-  resume.projects + " " +
-  resume.experience;
-
-const input = fullResume + "\n###\n" + job;
-
     try {
       const res = await fetch("http://127.0.0.1:8000/analyze", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-       body: JSON.stringify({
-  resume: fullResume + "\n###",
-  job: job
-})
+        body: JSON.stringify({
+          education: resume.education,
+          skills: resume.skills,
+          projects: resume.projects,
+          experience: resume.experience,
+          job: job
+        })
       });
 
       const data = await res.json();
-      setResult(data.output);
+      console.log("Backend Response:", data);
+
+      // ✅ FIX: use data.result instead of data.output
+      setResult(data.result || "No result returned");
+
     } catch (err) {
+      console.error(err);
       setResult("❌ Backend error");
     }
   };
