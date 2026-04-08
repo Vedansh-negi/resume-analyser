@@ -9,21 +9,21 @@ using namespace std;
 
 set<string> stopwords = {
     "a","an","the","is","are","of","for","and","to","with",
-    "in","on","by","as","at","from","or","that","this",
-    "using","built","plus","relevant","coursework","experience",
-    "looking","need","knowledge","developer"
+    "in","on","by","as","at","from","or","that","this"
 };
+
 map<string, string> normalize = {
-    {"mysql", "database"},
-    {"postgresql", "database"},
-    {"mongodb", "database"},
-    {"fastapi", "api"},
-    {"rest", "api"},
-    {"restapi", "api"},
-    {"oop", "concept"},
-    {"oops", "concept"},
-    {"objectoriented", "concept"},
-    {"javascript", "js"}
+    {"develop", "build"},
+{"built", "build"},
+{"developed", "build"},
+{"collaborate", "team"},
+{"team", "team"},
+{"cross", "team"},
+{"scalable", "system"},
+{"backend", "api"},
+{"apis", "api"},
+{"database", "database"},
+{"databases", "database"}
 };
 set<string> tokenize(string text){
     set<string> words;
@@ -34,7 +34,10 @@ set<string> tokenize(string text){
         } else {
             if(!word.empty()){
                 if(!stopwords.count(word) && word.length() > 2){
-                    words.insert(word);
+                    if(normalize.count(word))
+                        words.insert(normalize[word]);
+                    else
+                        words.insert(word);
                 }
                 word = "";
             }
@@ -56,11 +59,16 @@ map<string,int> freq(string text){
     map<string,int> f;
     string word = "";
     for(char c : text){
-        if(isalnum(c)){
+        if(isalpha(c)){
             word += tolower(c);
         } else {
             if(!word.empty()){
-                f[word]++;
+                if(!stopwords.count(word) && word.length() > 2){
+                    if(normalize.count(word))
+                        f[normalize[word]]++;
+                    else
+                        f[word]++;
+                }
                 word = "";
             }
         }
@@ -75,7 +83,8 @@ map<string,int> freq(string text){
 double cosine(map<string,int>& a, map<string,int>& b){
     double dot = 0, mag1 = 0, mag2 = 0;
     for(auto &p : a){
-        dot += p.second * b[p.first];
+        if(b.count(p.first))
+            dot += p.second * b[p.first];
         mag1 += p.second * p.second;
     }
     for(auto &p : b){
@@ -83,68 +92,142 @@ double cosine(map<string,int>& a, map<string,int>& b){
     }
     return dot / (sqrt(mag1) * sqrt(mag2) + 1e-9);
 }
-double jaccard(set<string>& a, set<string>& b){
+double jaccard(const set<string>& a, const set<string>& b){
     int inter = 0;
     for(auto &w : a){
         if(b.count(w)) inter++;
     }
     int uni = a.size() + b.size() - inter;
+    if(uni == 0) return 0;
+
     return (double)inter / uni;
 }
-int main(){
-    string resume, job;
-    string line;
-while(getline(cin, line)){
-    if(line == "###") break;
-    resume += line + " ";
-}
-while(getline(cin, line)){
-    job += line + " ";
-}
-    auto rset = tokenize(resume);
+
+double calculateScore(string text, string job){
+    auto tset = tokenize(text);
     auto jset = tokenize(job);
-    auto rf = freq(resume);
+
+    auto tf = freq(text);
     auto jf = freq(job);
-    double cos = cosine(rf, jf);
-    double jac = jaccard(rset, jset);
-    double score = (cos + jac) / 2 * 100;
-    vector<string> importantMissing;
-    for(auto &w : jset){
-        if(!rset.count(w) && w.length() > 3 && !stopwords.count(w)){
-            importantMissing.push_back(w);
+
+    double cos = cosine(tf, jf);
+    double jac = jaccard(tset, jset);
+
+    return (0.7 * cos + 0.3 * jac) * 100;
+}
+
+int main(){
+    string education, skills, projects, experience, job, line;
+
+    while(getline(cin, line)){
+        if(line == "###") break;
+        education += line + " ";
+    }
+
+    while(getline(cin, line)){
+        if(line == "###") break;
+        skills += line + " ";
+    }
+
+    while(getline(cin, line)){
+        if(line == "###") break;
+        projects += line + " ";
+    }
+
+    while(getline(cin, line)){
+        if(line == "###") break;
+        experience += line + " ";
+    }
+
+    while(getline(cin, line)){
+        job += line + " ";
+    }
+
+    // Token sets
+    auto jobSet = tokenize(job);
+
+    auto eduSet = tokenize(education);
+    auto skillSet = tokenize(skills);
+    auto projSet = tokenize(projects);
+    auto expSet = tokenize(experience);
+
+    // Score function
+    auto calc = [&](string text){
+        auto tf = freq(text);
+        auto jf = freq(job);
+
+        double cos = cosine(tf, jf);
+        double jac = jaccard(tokenize(text), jobSet);
+
+        return (0.7 * cos + 0.3 * jac) * 100;
+    };
+
+    double eduScore = calc(education);
+    double skillScore = calc(skills);
+    double projScore = calc(projects);
+    double expScore = calc(experience);
+
+    // 🔥 Slightly boosted weights (better UX)
+    double finalScore =
+    0.05 * eduScore+     // reduce impact
+    0.45 * skillScore +
+    0.30 * projScore +
+    0.20 * expScore;
+
+    // 🔥 Missing skills detection (from ALL sections combined)
+    set<string> resumeAll = eduSet;
+    resumeAll.insert(skillSet.begin(), skillSet.end());
+    resumeAll.insert(projSet.begin(), projSet.end());
+    resumeAll.insert(expSet.begin(), expSet.end());
+
+    vector<string> missing;
+
+    for(auto &w : jobSet){
+        if(!resumeAll.count(w) && w.length() > 4 && isalpha(w[0])){
+            missing.push_back(w);
         }
     }
-    if(importantMissing.size() > 5){
-        importantMissing.resize(5);
-    }
+
+    if(missing.size() > 5) missing.resize(5);
+
+    // 🔥 Match level
     string level;
-    if(score > 75) level = "Excellent match";
-    else if(score > 50) level = "Good match";
-    else if(score > 30) level = "Average match";
+    if(finalScore > 75) level = "Excellent match";
+    else if(finalScore > 50) level = "Good match";
+    else if(finalScore > 30) level = "Average match";
     else level = "Poor match";
-    cout << "Resume Score: " << score << "%\n\n";
+
+    // OUTPUT
+    cout << "Final Score: " << finalScore << "%\n\n";
+
     cout << "Match Quality: " << level << "\n\n";
-    cout << "Missing Key Skills:\n";
-    if(importantMissing.empty()){
+
+    cout << "Breakdown:\n";
+    cout << "Education: " << eduScore << "%\n";
+    cout << "Skills: " << skillScore << "%\n";
+    cout << "Projects: " << projScore << "%\n";
+    cout << "Experience: " << expScore << "%\n\n";
+
+    cout << "Missing Skills:\n";
+    if(missing.empty()){
         cout << "- None (Good match)\n";
     } else {
-        for(auto &w : importantMissing){
+        for(auto &w : missing){
             cout << "- " << w << "\n";
         }
     }
     cout << "\nSuggestions:\n";
-    if(score < 50){
+
+    if(finalScore < 50){
         cout << "- Add more relevant technical skills\n";
-        cout << "- Include job-related keywords\n";
+        cout << "- Include job-specific keywords\n";
     }
-    else if(score < 75){
+    else if(finalScore < 75){
         cout << "- Improve project descriptions\n";
         cout << "- Add measurable achievements\n";
     }
     else{
         cout << "- Resume looks strong\n";
     }
-cout << "DEBUG RESUME: " << resume << endl;//for debug(temporary)
-cout << "DEBUG JOB: " << job << endl;//for debug(temporary)
     return 0;
 }

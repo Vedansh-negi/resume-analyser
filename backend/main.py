@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import subprocess
-import json
 import os
 base_dir = os.path.dirname(__file__)
 cpp_path = os.path.join(base_dir, "/Users/vedanshnegi/Desktop/resume-optimizer/cpp_engine/analyzer")
@@ -22,23 +21,40 @@ app.add_middleware(
     allow_headers=["*"],
 )
 class RequestData(BaseModel):
-    resume: str
+    education: str
+    skills: str
+    projects: str
+    experience: str
     job: str
 @app.get("/")
 def home():
     return {"message": "Resume Analyzer API Running"}
 @app.post("/analyze")
 def analyze(data: RequestData):
-    process = subprocess.Popen(
-        ["../cpp_engine/analyzer"],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
-    input_data = data.resume + "\n" + data.job + "\n"
-    output, error = process.communicate(input_data)
-    return {
-    "output": output,
-    "error": error
-}
+    try:
+        process = subprocess.Popen(
+            [cpp_path],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+
+        # 🔥 Structured input for C++
+        input_data = (
+            data.education + "\n###\n" +
+            data.skills + "\n###\n" +
+            data.projects + "\n###\n" +
+            data.experience + "\n###\n" +
+            data.job + "\n"
+        )
+
+        output, error = process.communicate(input_data)
+
+        return {
+            "result": output,
+            "error": error
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
