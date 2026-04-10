@@ -39,8 +39,6 @@ def analyze(data: RequestData):
             stderr=subprocess.PIPE,
             text=True
         )
-
-        # 🔥 Structured input for C++
         input_data = (
             data.education + "\n###\n" +
             data.skills + "\n###\n" +
