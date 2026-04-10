@@ -11,7 +11,7 @@ set<string> stopwords = {
     "a","an","the","is","are","of","for","and","to","with",
     "in","on","by","as","at","from","or","that","this","experience",
     "skills","projects","education","developed","collaborated",
-    "built","develop","team","cross","scalable","concepts"
+    "built","develop","team","cross","scalable","concepts","build","database","Familiarity","integrate","knowledge"
 };
 
 map<string, string> normalize = {
