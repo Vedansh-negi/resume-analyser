@@ -15,8 +15,6 @@ function App() {
   const handleChange = (field, value) => {
     setResume({ ...resume, [field]: value });
   };
-
-  // ✅ FIXED ANALYZE FUNCTION
   const analyze = async () => {
     try {
       const res = await fetch("http://127.0.0.1:8000/analyze", {
@@ -36,7 +34,6 @@ function App() {
       const data = await res.json();
       console.log("Backend Response:", data);
 
-      // ✅ FIX: use data.result instead of data.output
       setResult(data.result || "No result returned");
 
     } catch (err) {
