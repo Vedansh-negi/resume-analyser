@@ -9,7 +9,9 @@ using namespace std;
 
 set<string> stopwords = {
     "a","an","the","is","are","of","for","and","to","with",
-    "in","on","by","as","at","from","or","that","this"
+    "in","on","by","as","at","from","or","that","this","experience",
+    "skills","projects","education","developed","collaborated",
+    "built","develop","team","cross","scalable","concepts"
 };
 
 map<string, string> normalize = {
