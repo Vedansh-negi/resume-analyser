@@ -143,7 +143,6 @@ int main(){
         job += line + " ";
     }
 
-    // Token sets
     auto jobSet = tokenize(job);
 
     auto eduSet = tokenize(education);
@@ -151,7 +150,6 @@ int main(){
     auto projSet = tokenize(projects);
     auto expSet = tokenize(experience);
 
-    // Score function
     auto calc = [&](string text){
         auto tf = freq(text);
         auto jf = freq(job);
@@ -167,14 +165,11 @@ int main(){
     double projScore = calc(projects);
     double expScore = calc(experience);
 
-    // 🔥 Slightly boosted weights (better UX)
     double finalScore =
-    0.05 * eduScore+     // reduce impact
+    0.05 * eduScore+     
     0.45 * skillScore +
     0.30 * projScore +
     0.20 * expScore;
-
-    // 🔥 Missing skills detection (from ALL sections combined)
     set<string> resumeAll = eduSet;
     resumeAll.insert(skillSet.begin(), skillSet.end());
     resumeAll.insert(projSet.begin(), projSet.end());
@@ -190,14 +185,11 @@ int main(){
 
     if(missing.size() > 5) missing.resize(5);
 
-    // 🔥 Match level
     string level;
     if(finalScore > 75) level = "Excellent match";
     else if(finalScore > 50) level = "Good match";
     else if(finalScore > 30) level = "Average match";
     else level = "Poor match";
-
-    // OUTPUT
     cout << "Final Score: " << finalScore << "%\n\n";
 
     cout << "Match Quality: " << level << "\n\n";
