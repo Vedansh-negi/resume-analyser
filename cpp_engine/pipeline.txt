@@ -1,0 +1,56 @@
+C++ main()
+   ↓
+getMLScore()
+   ↓
+writes input.json
+   ↓
+runs Python
+   ↓
+Python reads JSON
+   ↓
+ML computes similarity
+   ↓
+Python prints score
+   ↓
+C++ reads score
+   ↓
+returns number
+
+
+
+
+
+
+Resume + Job
+   ↓
+C++ NLP (cosine + jaccard)
+   ↓
+Python ML (semantic embeddings)
+   ↓
+Combine scores
+   ↓
+Knapsack optimization
+   ↓
+Final output
+
+
+
+
+we use pdf plumber for pdf parsing in python and not in cpp because in cpp it can get complicated and messy.
+PDF → Python parser
+    ↓
+Text → C++ NLP + ML
+    ↓
+Score + Suggestions
+
+
+after all the pdf parsing and using ml for calculating the score, the last pipeline looks something like this ->
+PDF → Python parser
+    ↓
+Text → C++ NLP
+    ↓
+ML semantic similarity
+    ↓
+Knapsack optimization
+    ↓
+Final output
