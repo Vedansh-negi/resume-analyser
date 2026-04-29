@@ -21,59 +21,6 @@ string clean(string s)
     return s;
 }
 
-string extractPDFText(string filePath)
-{
-    string command = "python3 cpp_engine/parse_pdf.py \"" + filePath + "\"";
-
-    FILE *pipe = popen(command.c_str(), "r");
-    if (!pipe)
-        return "";
-
-    char buffer[256];
-    string result = "";
-
-    while (fgets(buffer, sizeof(buffer), pipe) != NULL)
-    {
-        result += buffer;
-    }
-
-    pclose(pipe);
-    return result;
-}
-
-double getMLScore(string resume, string job)
-{
-    ofstream out("input.json");
-    out << "{\n";
-    out << "\"resume\": \"" << resume << "\",\n";
-    out << "\"job\": \"" << job << "\"\n";
-    out << "}";
-    out.close();
-
-    FILE *pipe = popen("python3 cpp_engine/semantic.py", "r");
-    if (!pipe)
-        return 0;
-
-    char buffer[128];
-    string result = "";
-
-    while (fgets(buffer, sizeof(buffer), pipe) != NULL)
-    {
-        result += buffer;
-    }
-
-    pclose(pipe);
-
-    try
-    {
-        return stod(result);
-    }
-    catch (...)
-    {
-        return 0;
-    }
-}
-
 set<string> stopwords = {
     "a", "an", "the", "is", "are", "of", "for", "and", "to", "with",
     "in", "on", "by", "as", "at", "from", "or", "that", "this", "experience",
@@ -148,7 +95,6 @@ map<string, int> freq(string text)
         if (!stopwords.count(word) && word.length() > 2)
             f[normalize.count(word) ? normalize[word] : word]++;
     }
-
     return f;
 }
 
@@ -217,37 +163,49 @@ vector<int> knapsackItems(vector<int> &val, vector<int> &wt, int W)
 
 int main()
 {
-    string resumeText = extractPDFText("resume.pdf");
+    // Read resume text and job description from stdin
+    // main.py sends them separated by a line containing only "###"
+    string line, resumeText, job;
+    bool readingJob = false;
+
+    while (getline(cin, line))
+    {
+        if (line == "###")
+        {
+            readingJob = true;
+            continue;
+        }
+        if (readingJob)
+            job += line + " ";
+        else
+            resumeText += line + " ";
+    }
 
     if (resumeText.empty())
     {
-        cout << "Error: Could not read PDF\n";
-        return 0;
+        cout << "{\"error\": \"Empty resume text received\"}" << endl;
+        return 1;
     }
 
-    string job = "Looking for deep learning, APIs, backend systems, and database experience";
+    if (job.empty())
+        job = "Looking for deep learning, APIs, backend systems, and database experience";
 
     string combinedResume = clean(resumeText);
     job = clean(job);
 
-    double mlScore = getMLScore(combinedResume, job) * 100;
-
-    auto jobSet = tokenize(job);
+    auto jobSet  = tokenize(job);
     auto jobFreq = freq(job);
 
     auto calc = [&](string text)
     {
-        auto tf = freq(text);
+        auto tf  = freq(text);
         double cos = cosine(tf, jobFreq);
         double jac = jaccard(tokenize(text), jobSet);
         return (0.7 * cos + 0.3 * jac) * 100;
     };
 
-    double baseScore = calc(combinedResume);
-
-    double finalScore =
-        0.6 * mlScore +
-        0.4 * baseScore;
+    double baseScore  = calc(combinedResume);
+    double finalScore = baseScore;
 
     set<string> resumeAll = tokenize(combinedResume);
 
@@ -278,23 +236,27 @@ int main()
     else
         level = "Poor match";
 
-    cout << "ML Score: " << mlScore << "%\n\n";
-    cout << "Final Score: " << finalScore << "%\n\n";
-    cout << "Match Quality: " << level << "\n\n";
+    // Output JSON so main.py can parse scores and keyword lists
+    cout << "{\n";
+    cout << "  \"final_score\": " << finalScore << ",\n";
+    cout << "  \"match_quality\": \"" << level << "\",\n";
 
-    cout << "Missing Skills:\n";
-    if (missing.empty())
-        cout << "- None (Good match)\n";
-    else
-        for (auto &w : missing)
-            cout << "- " << w << "\n";
+    cout << "  \"missing_keywords\": [";
+    for (int i = 0; i < (int)missing.size(); i++)
+    {
+        cout << "\"" << missing[i] << "\"";
+        if (i < (int)missing.size() - 1) cout << ", ";
+    }
+    cout << "],\n";
 
-    cout << "\nOptimized Skills to Add (Knapsack):\n";
-    if (selectedIdx.empty())
-        cout << "- None\n";
-    else
-        for (int idx : selectedIdx)
-            cout << "- " << missing[idx] << "\n";
+    cout << "  \"recommended_keywords\": [";
+    for (int i = 0; i < (int)selectedIdx.size(); i++)
+    {
+        cout << "\"" << missing[selectedIdx[i]] << "\"";
+        if (i < (int)selectedIdx.size() - 1) cout << ", ";
+    }
+    cout << "]\n";
+    cout << "}" << endl;
 
     return 0;
 }
